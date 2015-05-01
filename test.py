@@ -11,6 +11,6 @@ for line in f:
     q2 = pseg.cut(q[2])
     for w in q2:
         out.write(w.flag + "/")
-    out.write("\n")
+out.write("\n")
 
 print "Done~\n"
