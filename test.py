@@ -1,12 +1,12 @@
 import jieba.posseg as pseg
 import sys
+import math
 
 
 class Sentence:
-    def __init__(self, sentence, redundant):
+    def __init__(self, sentence):
         self.sentence = sentence
         self.sentence_with_pos = list(pseg.cut(sentence))
-        self.redundant = redundant
 
     def pos_iter(self, n):
         s_with_pos = self.sentence_with_pos
@@ -90,12 +90,16 @@ class Ngram:
             ans = self.good_turing_zero_prob
         return ans
 
-    def prob_to_gen(self, sentence):
-        pass
+    def prob_to_gen(self, sentence, method):
+        prob = 0
+        for gram in sentence.pos_iter(self.n):
+            if method == 'good_turing':
+                prob += math.log(self.good_turing_prob_f(gram))
+            elif method == 'add_k':
+                prob += math.log(self.add_k_prob_f(gram))
+        return prob
 
-
-
-def get_ngram(n, train_data):
+def get_sentence(train_data):
     f = open(train_data, "r")
     correct = []
     incorrect = []
@@ -103,11 +107,10 @@ def get_ngram(n, train_data):
         redundant = (line.split("\t")[1] == '1')
         sentence = line.split("\t")[2]
         if redundant:
-            incorrect.append(Sentence(sentence, redundant))
+            incorrect.append(Sentence(sentence))
         else:
-            correct.append(Sentence(sentence, redundant))
-    print("詞性分析結束\n")
-    return Ngram(n, correct), Ngram(n, incorrect)
+            correct.append(Sentence(sentence))
+    return correct, incorrect
 
 
 if __name__ == '__main__':
@@ -115,5 +118,30 @@ if __name__ == '__main__':
         print("usage : test.py [input_file] [n].\n")
         sys.exit(0)
     n = int(sys.argv[2])
-    correct_ngram, incorrect_ngram = get_ngram(n, sys.argv[1])
-    print(correct_ngram.add_k_prob_f((('n', 'n'), 'n')))
+    correct, incorrect = get_sentence(sys.argv[1])
+    correct_ngram, incorrect_ngram = (Ngram(n, correct), Ngram(n, incorrect))
+    print("add-k method")
+    total = 0
+    shoot = 0
+    for s in correct:
+        total += 1
+        if correct_ngram.prob_to_gen(s, 'add_k') > incorrect_ngram.prob_to_gen(s, 'add_k'):
+            shoot += 1
+    for s in incorrect:
+        total += 1
+        if correct_ngram.prob_to_gen(s, 'add_k') < incorrect_ngram.prob_to_gen(s, 'add_k'):
+            shoot += 1
+    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total))
+    print("good_turing method")
+    total = 0
+    shoot = 0
+    for s in correct:
+        total += 1
+        if correct_ngram.prob_to_gen(s, 'good_turing') > incorrect_ngram.prob_to_gen(s, 'good_turing'):
+            shoot += 1
+    for s in incorrect:
+        total += 1
+        if correct_ngram.prob_to_gen(s, 'good_turing') < incorrect_ngram.prob_to_gen(s, 'good_turing'):
+            shoot += 1
+    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total))
+
