@@ -4,7 +4,6 @@ import math
 
 
 class Sentence:
-    # TODO: 可設定是否redundant, ID等等
     def __init__(self, sentence):
         self.sentence = sentence
         self.sentence_with_pos = list(pseg.cut(sentence))
@@ -116,38 +115,55 @@ def get_sentence(train_data):
         sentences.append(s)
     return sentences
 
+def get_test_sentence(train_data):
+    f = open(train_data, "r")
+    sentences = []
+    for line in f:
+        sentence = line.split("\t")[1]
+        id = int(line.split("\t")[0].split("-")[1])
+        s = Sentence(sentence)
+        s.set_attr(id, False)
+        sentences.append(s)
+    return sentences
+
+# 測試已經知結果的資料，以fun來評估正確的機率
+def judge(sentences, fun):
+    correct = list(filter(lambda s: not s.redundant, sentences))
+    incorrect = list(filter(lambda s: s.redundant, sentences))
+    total = 0; shoot = 0
+    for s in correct:
+        total += 1
+        # print("sentence {0} should correct, {1}".format(s.sentence, fun(s)))
+        if fun(s):
+            shoot += 1
+    for s in incorrect:
+        # print("sentence {0} should incorrect, {1}".format(s.sentence, fun(s)))
+        total += 1
+        if not fun(s):
+            shoot += 1
+    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total))
+
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) < 3:
         print("usage : test.py [input_file] [n].\n")
+        print("usage : test.py [train_file] [n] [test_file].\n")
         sys.exit(0)
     n = int(sys.argv[2])
     sentences = get_sentence(sys.argv[1])
-    correct = list(filter(lambda s: not s.redundant, sentences))
-    incorrect = list(filter(lambda s: s.redundant, sentences))
+    length = len(sentences)
+    bound = int(length*0.0)
+    train_s = sentences[bound:]
+    correct = list(filter(lambda s: not s.redundant, train_s))
+    incorrect = list(filter(lambda s: s.redundant, train_s))
     correct_ngram, incorrect_ngram = (Ngram(n, correct), Ngram(n, incorrect))
-    print("add-k method")
-    total = 0
-    shoot = 0
-    for s in correct:
-        total += 1
-        if correct_ngram.prob_to_gen(s, 'add_k') > incorrect_ngram.prob_to_gen(s, 'add_k'):
-            shoot += 1
-    for s in incorrect:
-        total += 1
-        if correct_ngram.prob_to_gen(s, 'add_k') < incorrect_ngram.prob_to_gen(s, 'add_k'):
-            shoot += 1
-    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total))
-    print("good_turing method")
-    total = 0
-    shoot = 0
-    for s in correct:
-        total += 1
-        if correct_ngram.prob_to_gen(s, 'good_turing') > incorrect_ngram.prob_to_gen(s, 'good_turing'):
-            shoot += 1
-    for s in incorrect:
-        total += 1
-        if correct_ngram.prob_to_gen(s, 'good_turing') < incorrect_ngram.prob_to_gen(s, 'good_turing'):
-            shoot += 1
-    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total))
 
+    # test_s = sentences[0:bound]
+    test_s = get_sentence(sys.argv[3])
+    # test_s = get_test_sentence(sys.argv[3])
+    print("all true")
+    judge(test_s, lambda s: True)
+    print("add-k method")
+    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'add_k') < incorrect_ngram.prob_to_gen(s, 'add_k'))
+    print("good_turing method")
+    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'good_turing') < incorrect_ngram.prob_to_gen(s, 'good_turing'))
