@@ -1,11 +1,25 @@
 import jieba.posseg as pseg
 import sys
 
+
 class Sentence:
     def __init__(self, sentence, redundant):
         self.sentence = sentence
         self.sentence_with_pos = list(pseg.cut(sentence))
         self.redundant = redundant
+
+    def pos_iter(self, n):
+        s_with_pos = self.sentence_with_pos
+        for position in range(0, len(s_with_pos)):
+            prefix = []
+            for shift in range(-n + 1, 0):
+                if position + shift < 0:
+                    prefix.append(None)
+                else:
+                    prefix.append(s_with_pos[position + shift].flag)
+            prefix = tuple(prefix)
+            th = s_with_pos[position].flag
+            yield (prefix, th)
 
 
 # 做有兩種平滑版本
@@ -27,20 +41,12 @@ class Ngram:
     def count(self, sentences):
         count = {}
         for sentence in sentences:
-            s_with_pos = sentence.sentence_with_pos
-            for position in range(0, len(s_with_pos)):
-                prefix = []
-                for shift in range(-self.n + 1, 0):
-                    if position + shift < 0:
-                        prefix.append(None)
-                    else:
-                        prefix.append(s_with_pos[position + shift].flag)
-                prefix = tuple(prefix)
-                th = s_with_pos[position].flag
+            grams = sentence.pos_iter(n)
+            for gram in grams:
                 try:
-                    count[(prefix, th)] += 1
+                    count[gram] += 1
                 except KeyError:
-                    count[(prefix, th)] = 1
+                    count[gram] = 1
         return count
 
     def count_add_k_prob(self, k):
@@ -110,3 +116,4 @@ if __name__ == '__main__':
         sys.exit(0)
     n = int(sys.argv[2])
     correct_ngram, incorrect_ngram = get_ngram(n, sys.argv[1])
+    print(correct_ngram.add_k_prob_f((('n', 'n'), 'n')))
