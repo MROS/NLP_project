@@ -4,9 +4,14 @@ import math
 
 
 class Sentence:
+    # TODO: 可設定是否redundant, ID等等
     def __init__(self, sentence):
         self.sentence = sentence
         self.sentence_with_pos = list(pseg.cut(sentence))
+
+    def set_attr(self, id, redundant):
+        self.id = id
+        self.redundant = redundant
 
     def pos_iter(self, n):
         s_with_pos = self.sentence_with_pos
@@ -101,16 +106,15 @@ class Ngram:
 
 def get_sentence(train_data):
     f = open(train_data, "r")
-    correct = []
-    incorrect = []
+    sentences = []
     for line in f:
         redundant = (line.split("\t")[1] == '1')
         sentence = line.split("\t")[2]
-        if redundant:
-            incorrect.append(Sentence(sentence))
-        else:
-            correct.append(Sentence(sentence))
-    return correct, incorrect
+        id = int(line.split("\t")[0].split("-")[1])
+        s = Sentence(sentence)
+        s.set_attr(id, redundant)
+        sentences.append(s)
+    return sentences
 
 
 if __name__ == '__main__':
@@ -118,7 +122,9 @@ if __name__ == '__main__':
         print("usage : test.py [input_file] [n].\n")
         sys.exit(0)
     n = int(sys.argv[2])
-    correct, incorrect = get_sentence(sys.argv[1])
+    sentences = get_sentence(sys.argv[1])
+    correct = list(filter(lambda s: not s.redundant, sentences))
+    incorrect = list(filter(lambda s: s.redundant, sentences))
     correct_ngram, incorrect_ngram = (Ngram(n, correct), Ngram(n, incorrect))
     print("add-k method")
     total = 0
