@@ -1,3 +1,4 @@
+#! /usr/bin/python3
 import jieba.posseg as pseg
 import sys
 import math
@@ -36,8 +37,7 @@ class Ngram:
         self.total_gram = sum(self.count.values())
         self.add_k_prob,  self.add_k_zero_prob = self.count_add_k_prob(0.5)
         self.good_turing_prob,  self.good_turing_zero_prob = self.count_good_turing_prob()
-        print("ngram 計算結束")
-        print("共有{0}個gram", self.total_gram)
+        print("ngram 計算結束", file=sys.stderr)
 
     # 回傳目前的計數
     # 用個dictionary來紀錄
@@ -76,7 +76,7 @@ class Ngram:
                 times[self.count[key]] += 1
             except KeyError:
                 times[self.count[key]] = 1
-        print(times)
+        print(times, file=sys.stderr)
         for key in self.count:
             if self.count[key] <= 5:
                 n = self.count[key]
@@ -128,6 +128,14 @@ def get_test_sentence(train_data):
         sentences.append(s)
     return sentences
 
+def print_result(test_data, fun):
+    for s in test_data:
+        print("p1test-{0} \t".format(s.id), end="")
+        if fun(s):
+            print("0")
+        else:
+            print("1")
+
 
 # 測試已經知結果的資料，以fun來評估正確的機率
 def judge(sentences, fun):
@@ -136,21 +144,19 @@ def judge(sentences, fun):
     total = 0; shoot = 0
     for s in correct:
         total += 1
-        # print("sentence {0} should correct, {1}".format(s.sentence, fun(s)))
         if fun(s):
             shoot += 1
     for s in incorrect:
-        # print("sentence {0} should incorrect, {1}".format(s.sentence, fun(s)))
         total += 1
         if not fun(s):
             shoot += 1
-    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total))
+    print("result: {0} / {1} = {2}".format(shoot, total, shoot / total), file=sys.stderr)
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("usage : redundant.py [input_file] [n].\n")
-        print("usage : redundant.py [train_file] [n] [test_file].\n")
+        print("usage : redundant.py [input_file] [n].\n", file=sys.stderr)
+        print("usage : redundant.py [train_file] [n] [output_file].\n", file=sys.stderr)
         sys.exit(0)
     n = int(sys.argv[2])
     sentences = get_sentence(sys.argv[1])
@@ -160,13 +166,17 @@ if __name__ == '__main__':
     correct = list(filter(lambda s: not s.redundant, train_s))
     incorrect = list(filter(lambda s: s.redundant, train_s))
     correct_ngram, incorrect_ngram = (Ngram(n, correct), Ngram(n, incorrect))
+    if len(sys.argv) == 3:
+        test_s = sentences[bound:]
+        # test_s = get_sentence(sys.argv[3])
+        # test_s = get_test_sentence(sys.argv[3])
+        print("all true", file=sys.stderr)
+        judge(test_s, lambda s: True)
+        print("add-k method", file=sys.stderr)
+        judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'add_k') > incorrect_ngram.prob_to_gen(s, 'add_k'))
+        print("good_turing method", file=sys.stderr)
+        judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'good_turing') > incorrect_ngram.prob_to_gen(s, 'good_turing'))
+    elif len(sys.argv) == 4:
+        test_s = get_test_sentence(sys.argv[3])
+        print_result(test_s, lambda s: correct_ngram.prob_to_gen(s, 'add_k') > incorrect_ngram.prob_to_gen(s, 'add_k'))
 
-    test_s = sentences[bound:]
-    # test_s = get_sentence(sys.argv[3])
-    # test_s = get_test_sentence(sys.argv[3])
-    print("all true")
-    judge(test_s, lambda s: True)
-    print("add-k method")
-    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'add_k') > incorrect_ngram.prob_to_gen(s, 'add_k'))
-    print("good_turing method")
-    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'good_turing') > incorrect_ngram.prob_to_gen(s, 'good_turing'))
