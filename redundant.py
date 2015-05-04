@@ -149,8 +149,8 @@ def judge(sentences, fun):
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("usage : test.py [input_file] [n].\n")
-        print("usage : test.py [train_file] [n] [test_file].\n")
+        print("usage : redundant.py [input_file] [n].\n")
+        print("usage : redundant.py [train_file] [n] [test_file].\n")
         sys.exit(0)
     n = int(sys.argv[2])
     sentences = get_sentence(sys.argv[1])
