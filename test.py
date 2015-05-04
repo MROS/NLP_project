@@ -8,8 +8,8 @@ class Sentence:
         self.sentence = sentence
         self.sentence_with_pos = list(pseg.cut(sentence))
 
-    def set_attr(self, id, redundant):
-        self.id = id
+    def set_attr(self, identifier, redundant):
+        self.id = identifier
         self.redundant = redundant
 
     def pos_iter(self, n):
@@ -30,7 +30,7 @@ class Sentence:
 class Ngram:
     def __init__(self, n, sentences):
         self.n = n
-        self.POS_KINDS = 39 # 我去數的，不知道對不對
+        self.POS_KINDS = 39  # 我去數的，不知道對不對
         self.add_k_zero_prob = 0
         self.count = self.count(sentences)
         self.total_gram = sum(self.count.values())
@@ -103,6 +103,8 @@ class Ngram:
                 prob += math.log(self.add_k_prob_f(gram))
         return prob
 
+
+
 def get_sentence(train_data):
     f = open(train_data, "r")
     sentences = []
@@ -125,6 +127,7 @@ def get_test_sentence(train_data):
         s.set_attr(id, False)
         sentences.append(s)
     return sentences
+
 
 # 測試已經知結果的資料，以fun來評估正確的機率
 def judge(sentences, fun):
@@ -152,18 +155,18 @@ if __name__ == '__main__':
     n = int(sys.argv[2])
     sentences = get_sentence(sys.argv[1])
     length = len(sentences)
-    bound = int(length*0.0)
-    train_s = sentences[bound:]
+    bound = int(length*0.97)
+    train_s = sentences[0:bound]
     correct = list(filter(lambda s: not s.redundant, train_s))
     incorrect = list(filter(lambda s: s.redundant, train_s))
     correct_ngram, incorrect_ngram = (Ngram(n, correct), Ngram(n, incorrect))
 
-    # test_s = sentences[0:bound]
-    test_s = get_sentence(sys.argv[3])
+    test_s = sentences[bound:]
+    # test_s = get_sentence(sys.argv[3])
     # test_s = get_test_sentence(sys.argv[3])
     print("all true")
     judge(test_s, lambda s: True)
     print("add-k method")
-    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'add_k') < incorrect_ngram.prob_to_gen(s, 'add_k'))
+    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'add_k') > incorrect_ngram.prob_to_gen(s, 'add_k'))
     print("good_turing method")
-    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'good_turing') < incorrect_ngram.prob_to_gen(s, 'good_turing'))
+    judge(test_s, lambda s: correct_ngram.prob_to_gen(s, 'good_turing') > incorrect_ngram.prob_to_gen(s, 'good_turing'))
